@@ -6,40 +6,34 @@ import android.widget.TextView;
 import androidx.appcompat.app.AppCompatActivity;
 import android.graphics.Color;
 import android.view.Gravity;
-
-import com.example.jeu2048.R;
+import android.view.MotionEvent;
 
 import java.util.Random;
 
 public class MainActivity extends AppCompatActivity {
 
-    // Grille visuelle
     private GridLayout gridLayout;
-
-    // Tableau 2D contenant les TextView (affichage)
     private TextView[][] cells = new TextView[4][4];
-
-    // Tableau 2D contenant les valeurs numériques (logique du jeu)
     private int[][] grid = new int[4][4];
+
+    // ✅ Une seule variable utilisée → plus de warning
+    private float startX;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
 
-        // Lie le layout XML à l'Activity
         setContentView(R.layout.activity_main);
 
         gridLayout = findViewById(R.id.gridLayout);
 
-        // Création des 16 cases visuelles
         createGrid();
-
-        // Initialisation du jeu
         initializeGame();
+        setupSwipe();
     }
 
     /**
-     * Création dynamique de la grille 4x4
+     * Création de la grille 4x4
      */
     private void createGrid() {
 
@@ -69,45 +63,40 @@ public class MainActivity extends AppCompatActivity {
     }
 
     /**
-     * Initialise la grille logique et ajoute 2 tuiles
+     * Initialise la grille
      */
     private void initializeGame() {
 
-        // Remet toutes les cases à 0
         for (int row = 0; row < 4; row++) {
             for (int col = 0; col < 4; col++) {
                 grid[row][col] = 0;
             }
         }
 
-        // Ajouter 2 tuiles au démarrage
         addRandomTile();
         addRandomTile();
 
-        // Synchroniser affichage
         updateUI();
     }
 
     /**
-     * Ajoute une tuile 2 (90%) ou 4 (10%) dans une case vide
+     * Ajoute une tuile aléatoire
      */
     private void addRandomTile() {
 
         Random random = new Random();
         int row, col;
 
-        // Cherche une case vide
         do {
             row = random.nextInt(4);
             col = random.nextInt(4);
         } while (grid[row][col] != 0);
 
-        // 90% de chance d'avoir 2, 10% d'avoir 4
         grid[row][col] = random.nextInt(10) < 9 ? 2 : 4;
     }
 
     /**
-     * Met à jour l'affichage en fonction du tableau logique
+     * Met à jour l'affichage
      */
     private void updateUI() {
 
@@ -123,5 +112,67 @@ public class MainActivity extends AppCompatActivity {
                 }
             }
         }
+    }
+
+    /**
+     * Déplacement vers la gauche
+     */
+    private void moveLeft() {
+        boolean moved = false;
+
+        for (int row = 0; row < 4; row++) {
+            int[] newRow = new int[4];
+            int position = 0;
+
+            for (int col = 0; col < 4; col++) {
+                if (grid[row][col] != 0) newRow[position++] = grid[row][col];
+            }
+
+            for (int col = 0; col < 3; col++) {
+                if (newRow[col] != 0 && newRow[col] == newRow[col + 1]) {
+                    newRow[col] *= 2;
+                    newRow[col + 1] = 0;
+                    moved = true;
+                }
+            }
+
+            int[] finalRow = new int[4];
+            position = 0;
+            for (int col = 0; col < 4; col++) {
+                if (newRow[col] != 0) finalRow[position++] = newRow[col];
+            }
+
+            if (!java.util.Arrays.equals(grid[row], finalRow)) moved = true;
+            grid[row] = finalRow;
+        }
+
+        if (moved) {
+            addRandomTile();
+            updateUI();
+        }
+    }
+    /**
+     * Gestion du swipe (gauche uniquement)
+     */
+    private void setupSwipe() {
+        gridLayout.setOnTouchListener((v,event) -> {
+            switch (event.getAction()) {
+
+                case MotionEvent.ACTION_DOWN:
+                    startX = event.getX();
+                    break;
+
+                case MotionEvent.ACTION_UP:
+                    float endX = event.getX();
+                    float dx = endX - startX;
+
+                    if (dx < 0) {
+                        moveLeft();
+                    }
+                    break;
+            }
+
+            return true;
+        });
     }
 }
